@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Achadinhos da Nintendo 🎮</title>
 <script src="https://cdn.tailwindcss.com"></script>
+
 <style>
 body{
   margin:0;
@@ -12,12 +13,16 @@ body{
 .neon{
   text-shadow:0 0 8px #ff004c,0 0 16px #ff004c;
 }
+.card{
+  transition:0.3s;
+}
 .card:hover{
   box-shadow:0 0 20px #ff004c;
   transform:scale(1.05);
 }
 </style>
 </head>
+
 <body class="text-white">
 
 <header class="bg-gradient-to-r from-red-600 to-pink-600 p-6 text-center text-3xl font-extrabold neon">
@@ -54,15 +59,14 @@ async function buscar(){
 
   try{
 
-    const url = "https://api.mercadolibre.com/sites/MLB/search?q=" 
+    // Proxy para evitar bloqueio
+    const proxy = "https://api.allorigins.win/raw?url=";
+
+    const api = "https://api.mercadolibre.com/sites/MLB/search?q="
                 + encodeURIComponent(termo)
                 + "&limit=12";
 
-    const resposta = await fetch(url);
-
-    if(!resposta.ok){
-      throw new Error("Erro na API");
-    }
+    const resposta = await fetch(proxy + encodeURIComponent(api));
 
     const dados = await resposta.json();
 
@@ -82,7 +86,7 @@ async function buscar(){
       const card = document.createElement("a");
       card.href = item.permalink;
       card.target="_blank";
-      card.className="card bg-gray-800 p-5 rounded-xl transition duration-300";
+      card.className="card bg-gray-800 p-5 rounded-xl";
 
       card.innerHTML = `
         <div class="h-40 flex items-center justify-center mb-4">
@@ -106,10 +110,7 @@ async function buscar(){
     });
 
   }catch(e){
-    area.innerHTML = `
-      ❌ Não foi possível buscar preços.<br><br>
-      ⚠️ Se estiver abrindo pelo computador, publique o site online.
-    `;
+    area.innerHTML = "❌ Erro ao buscar preços. Tente novamente.";
   }
 }
 
