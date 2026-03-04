@@ -3,118 +3,90 @@
 <head>
 <meta charset="UTF-8">
 <title>Achadinhos da Nintendo 🎮</title>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-body{
-  margin:0;
-  background: radial-gradient(circle at top, #1a1a2e, #0f0f1a);
-}
-.neon{
-  text-shadow:0 0 8px #ff004c,0 0 16px #ff004c;
-}
-.card{
-  transition:0.3s;
-}
-.card:hover{
-  box-shadow:0 0 20px #ff004c;
-  transform:scale(1.05);
-}
-</style>
-</head>
-
-<body class="text-white">
-
-<header class="bg-gradient-to-r from-red-600 to-pink-600 p-6 text-center text-3xl font-extrabold neon">
-🎮 Achadinhos da Nintendo
-</header>
-
-<section class="text-center p-6">
-<input 
-id="busca"
-placeholder="Buscar Joy-Con, Switch OLED, Zelda..."
-class="w-full max-w-xl p-3 rounded text-black"
-/>
-<button onclick="buscar()" 
-class="mt-4 bg-red-600 hover:bg-pink-500 px-6 py-2 rounded font-bold transition">
-🔥 Buscar
-</button>
-</section>
-
-<main id="resultado" class="p-6 grid md:grid-cols-2 lg:grid-cols-3 gap-6"></main>
-
 <script>
+document.addEventListener("DOMContentLoaded", carregarProdutos);
 
-async function buscar(){
-
-  const termo = document.getElementById("busca").value.trim();
+async function carregarProdutos() {
   const area = document.getElementById("resultado");
+  area.innerHTML = "🎮 Carregando achadinhos Nintendo...";
 
-  if(!termo){
-    alert("Digite algo para pesquisar.");
-    return;
-  }
+  try {
+    const produtos = [];
 
-  area.innerHTML = "🎮 Buscando ofertas...";
+    // 1. Mercado Livre
+    const ml = await fetch("https://api.mercadolibre.com/sites/MLB/search?q=nintendo&limit=12");
+    const dadosML = await ml.json();
+    dadosML.results.forEach(p => {
+      produtos.push({
+        titulo: p.title,
+        preco: p.price,
+        imagem: p.thumbnail,
+        link: p.permalink,
+        loja: "Mercado Livre"
+      });
+    });
 
-  try{
+    // 2. MelhorComprar (não bloqueia CORS)
+    const mc = await fetch("https://www.melhorcomprar.com.br/search?q=nintendo");
+    const html = await mc.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
 
-    // Proxy para evitar bloqueio
-    const proxy = "https://api.allorigins.win/raw?url=";
+    doc.querySelectorAll(".product-card").forEach(card => {
+      const titulo = card.querySelector(".product-title")?.innerText;
+      const preco = card.querySelector(".product-price")?.innerText.replace("R$", "").trim();
+      const imagem = card.querySelector("img")?.src;
+      const link = card.querySelector("a")?.href;
 
-    const api = "https://api.mercadolibre.com/sites/MLB/search?q="
-                + encodeURIComponent(termo)
-                + "&limit=12";
+      if (titulo && preco) {
+        produtos.push({
+          titulo,
+          preco: parseFloat(preco.replace(".", "").replace(",", ".")),
+          imagem,
+          link,
+          loja: "Melhor Comprar"
+        });
+      }
+    });
 
-    const resposta = await fetch(proxy + encodeURIComponent(api));
+    // Ordenar por preço
+    produtos.sort((a, b) => a.preco - b.preco);
 
-    const dados = await resposta.json();
-
-    if(!dados.results || dados.results.length === 0){
-      area.innerHTML = "Nenhum produto encontrado.";
-      return;
-    }
-
-    const lista = dados.results
-      .sort((a,b)=>a.price-b.price)
-      .slice(0,9);
-
+    // Renderizar
     area.innerHTML = "";
-
-    lista.forEach((item,index)=>{
-
+    produtos.slice(0, 12).forEach((item, index) => {
       const card = document.createElement("a");
-      card.href = item.permalink;
-      card.target="_blank";
-      card.className="card bg-gray-800 p-5 rounded-xl";
+      card.href = item.link;
+      card.target = "_blank";
+      card.className = "card bg-gray-800 p-5 rounded-xl";
 
       card.innerHTML = `
         <div class="h-40 flex items-center justify-center mb-4">
-          <img src="${item.thumbnail}" class="max-h-36 object-contain"/>
+          <img src="${item.imagem}" class="max-h-36 object-contain"/>
         </div>
 
-        <h3 class="text-sm font-bold mb-2">${item.title}</h3>
+        <h3 class="text-sm font-bold mb-2">${item.titulo}</h3>
 
         <p class="text-green-400 text-2xl font-extrabold">
-          R$ ${item.price.toFixed(2)}
+          R$ ${item.preco.toFixed(2)}
         </p>
 
-        ${index===0 ? `
+        <p class="text-xs text-gray-400 mt-1">${item.loja}</p>
+
+        ${index === 0 ? `
           <div class="mt-3 bg-red-600 text-center py-1 rounded font-bold">
             🏆 Melhor Preço
           </div>` : ``}
       `;
 
       area.appendChild(card);
-
     });
 
-  }catch(e){
-    area.innerHTML = "❌ Erro ao buscar preços. Tente novamente.";
+  } catch (e) {
+    console.error(e);
+    area.innerHTML = "❌ Erro ao carregar produtos.";
   }
 }
-
 </script>
-
 </body>
 </html>
